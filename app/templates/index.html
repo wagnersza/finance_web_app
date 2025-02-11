@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Despesas por Categoria</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="expensesByCategory"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Despesas Mensais</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyExpenses"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Visão Geral das Contas</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Conta</th>
+                                    <th>Banco</th>
+                                    <th class="text-right">Saldo</th>
+                                    <th>Moeda</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in accounts %}
+                                <tr>
+                                    <td>{{ account.name }}</td>
+                                    <td>{{ account.bank.name }}</td>
+                                    <td class="text-right {{ 'text-danger' if account.balance < 0 else 'text-dark' }}">
+                                        {{ account.currency.symbol }} {{ "%.2f"|format(account.balance) }}
+                                    </td>
+                                    <td>{{ account.currency.code }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+// Safari-safe initialization
+window.addEventListener('load', function() {
+    // Ensure all elements are fully loaded before initializing charts
+    setTimeout(function() {
+        try {
+            // Parse data from server-side
+            const categoryLabels = {{ category_labels|tojson|safe }} || [];
+            const categoryAmounts = {{ category_amounts|tojson|safe }} || [];
+            const monthlyLabels = {{ monthly_labels|tojson|safe }} || [];
+            const monthlyAmounts = {{ monthly_amounts|tojson|safe }} || [];
+            const defaultCurrencySymbol = '{{ default_currency.symbol|safe }}';
+
+            // Initialize category chart
+            const categoryCtx = document.getElementById('expensesByCategory');
+            if (categoryCtx && categoryCtx.getContext) {
+                const ctx = categoryCtx.getContext('2d');
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: categoryLabels,
+                            datasets: [{
+                                data: categoryAmounts,
+                                backgroundColor: [
+                                    '#FF6384',
+                                    '#36A2EB',
+                                    '#FFCE56',
+                                    '#4BC0C0',
+                                    '#9966FF',
+                                    '#FF9F40'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        font: {
+                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Initialize monthly chart
+            const monthlyCtx = document.getElementById('monthlyExpenses');
+            if (monthlyCtx && monthlyCtx.getContext) {
+                const ctx = monthlyCtx.getContext('2d');
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: monthlyLabels,
+                            datasets: [{
+                                label: 'Total de Despesas',
+                                data: monthlyAmounts,
+                                borderColor: '#36A2EB',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                fill: true,
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: {
+                                        font: {
+                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${defaultCurrencySymbol} ${context.parsed.y.toFixed(2)}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return defaultCurrencySymbol + ' ' + value.toFixed(2);
+                                        },
+                                        font: {
+                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                        }
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        font: {
+                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error initializing charts:', error);
+        }
+    }, 0);
+});
+</script>
+{% endblock %}
+{% endblock %}

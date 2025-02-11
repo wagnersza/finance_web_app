@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Accounts - Personal Finance App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Adicionar Nova Conta</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nome da Conta</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bank_id" class="form-label">Banco</label>
+                        <select class="form-control" id="bank_id" name="bank_id" required>
+                            {% for bank in banks %}
+                            <option value="{{ bank.id }}">{{ bank.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="currency_id" class="form-label">Moeda</label>
+                        <select class="form-control" id="currency_id" name="currency_id" required>
+                            {% for currency in currencies %}
+                            <option value="{{ currency.id }}">{{ currency.code }} - {{ currency.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Adicionar Conta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Contas</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Banco</th>
+                            <th>Moeda</th>
+                            <th>Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in accounts %}
+                        <tr>
+                            <td>{{ account.name }}</td>
+                            <td>{{ account.bank.name }}</td>
+                            <td>{{ account.currency.code }}</td>
+                            <td class="{{ 'text-danger' if account.balance < 0 else 'text-dark' }}">
+                                {{ account.currency.symbol }}{{ "%.2f"|format(account.balance) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

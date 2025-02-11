@@ -1,0 +1,53 @@
+<!-- Nova Categoria Modal -->
+<div class="modal fade" id="newCategoryModal" tabindex="-1" aria-labelledby="newCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newCategoryModalLabel">Nova Categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="newCategoryForm" method="POST" action="{{ url_for('main.add_category_ajax') }}">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label for="category_name" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="category_name" name="name" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="category_description" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="category_description" name="description">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('newCategoryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const select = document.getElementById('category_id');
+            const option = new Option(data.category.name, data.category.id);
+            select.add(option);
+            select.value = data.category.id;
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newCategoryModal'));
+            modal.hide();
+            this.reset();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+});
+</script>

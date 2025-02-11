@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="header-section">
+        <h1>Despesas</h1>
+        <a href="{{ url_for('main.add_expense') }}" class="btn btn-primary">Nova Transação</a>
+    </div>
+    
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th class="text-right">Valor</th>
+                <th>Categoria</th>
+                <th>Conta</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ expense.date.strftime('%d/%m/%Y') }}</td>
+                <td>{{ expense.description }}</td>
+                <td><span class="badge {{ 'bg-danger' if expense.is_expense else 'bg-success' }}">
+                    {{ 'Despesa' if expense.is_expense else 'Receita' }}
+                </span></td>
+                <td class="text-right {{ 'text-danger' if expense.is_expense else 'text-success' }}">
+                    {{ expense.account.currency.symbol }} {{ "%.2f"|format(expense.amount) }}
+                </td>
+                <td>{{ expense.category.name if expense.category else 'N/A' }}</td>
+                <td>{{ expense.account.name if expense.account else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
