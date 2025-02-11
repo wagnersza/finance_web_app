@@ -396,3 +396,29 @@ canvas {
         margin-bottom: 1rem;
     }
 }
+
+/* Safari-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    /* Fix for input appearance in Safari */
+    input {
+        -webkit-appearance: none;
+        margin: 0;
+        border-radius: 8px;
+    }
+    
+    /* Fix for modal backdrop in Safari */
+    .modal-backdrop {
+        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(5px);
+    }
+
+    /* Fix for smooth scrolling in Safari */
+    .modal {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Fix for button rendering in Safari */
+    .btn {
+        -webkit-appearance: none;
+    }
+}

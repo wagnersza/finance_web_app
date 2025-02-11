@@ -64,13 +64,32 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Fix modal stacking issues in Safari
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
-            modal.addEventListener('hide.bs.modal', function (event) {
-                const openModals = document.querySelectorAll('.modal.show');
-                if (openModals.length > 0) {
-                    document.body.classList.add('modal-open');
-                }
+            new bootstrap.Modal(modal, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+
+            // Handle modal stacking
+            modal.addEventListener('show.bs.modal', function() {
+                const openModals = Array.from(document.querySelectorAll('.modal.show'));
+                openModals.forEach(openModal => {
+                    if (openModal !== modal) {
+                        bootstrap.Modal.getInstance(openModal).hide();
+                    }
+                });
+            });
+
+            // Ensure body class is properly managed
+            modal.addEventListener('hidden.bs.modal', function() {
+                setTimeout(() => {
+                    if (document.querySelector('.modal.show')) {
+                        document.body.classList.add('modal-open');
+                    }
+                }, 10);
             });
         });
 
