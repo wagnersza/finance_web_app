@@ -2,18 +2,8 @@
 
 {% block content %}
 <div class="container">
-    <h1>Nova Transação</h1>
+    <h1>Nova Despesa</h1>
     <form method="POST" action="{{ url_for('main.add_expense') }}" class="expense-form">
-        <div class="form-group">
-            <label>Tipo de Transação</label>
-            <div class="btn-group w-100 mb-3" role="group">
-                <input type="radio" class="btn-check" name="type" id="type-expense" value="expense" checked>
-                <label class="btn btn-outline-danger" for="type-expense">Despesa</label>
-                
-                <input type="radio" class="btn-check" name="type" id="type-revenue" value="revenue">
-                <label class="btn btn-outline-success" for="type-revenue">Receita</label>
-            </div>
-        </div>
         <div class="form-group">
             <label for="description">Descrição</label>
             <input type="text" id="description" name="description" required class="form-control">

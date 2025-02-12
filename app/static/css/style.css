@@ -5,6 +5,8 @@
     --card-bg: #242424;
     --text-primary: #ffffff;
     --text-secondary: #a0a0a0;
+    --backdrop-base-z: 1040;
+    --modal-base-z: 1050;
 }
 
 body {
@@ -359,6 +361,154 @@ canvas {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Modal Stacking */
+.modal {
+    pointer-events: all !important;
+    --bs-modal-zindex: 1055;
+}
+
+.modal-backdrop {
+    pointer-events: none !important;
+    --bs-backdrop-opacity: 0.5;
+    opacity: var(--bs-backdrop-opacity);
+    z-index: 1040;
+    --bs-backdrop-zindex: calc(var(--bs-modal-zindex) - 5);
+    z-index: var(--bs-backdrop-zindex) !important;
+}
+
+.modal-backdrop + .modal-backdrop {
+    display: none !important;
+    --bs-backdrop-opacity: 0.2;
+}
+
+.modal.show {
+    z-index: 1055 !important;
+    --modal-z-index: 1055;
+    z-index: var(--modal-z-index) !important;
+}
+
+.modal.show .modal-dialog {
+    z-index: 1056 !important;
+    z-index: calc(var(--modal-z-index) + 1) !important;
+}
+
+.modal.show + .modal.show {
+    z-index: 1057 !important;
+    --modal-z-index: 1065;
+    background: transparent;
+}
+
+.modal.show + .modal.show .modal-dialog {
+    z-index: 1058 !important;
+    z-index: calc(var(--modal-z-index) + 1) !important;
+}
+
+.modal.show ~ .modal.show {
+    z-index: 1057 !important;
+    --modal-zindex: 1075;
+}
+
+.modal.show ~ .modal.show .modal-dialog {
+    z-index: 1058 !important;
+    z-index: calc(var(--modal-zindex) + 1) !important;
+}
+
+.modal ~ .modal {
+    --bs-modal-zindex: 1065;
+}
+
+.modal ~ .modal ~ .modal {
+    --bs-modal-zindex: 1075;
+}
+
+.modal .modal {
+    z-index: 1057 !important;
+}
+
+.modal .modal .modal-dialog {
+    z-index: 1058 !important;
+}
+
+/* Fix input focus in modals */
+.modal-open .modal .form-control:focus,
+.modal-open .modal .form-select:focus,
+.modal-open .modal .btn:focus {
+    z-index: 1059 !important;
+    position: relative;
+}
+
+/* Ensure proper modal stacking and interaction */
+.modal-dialog {
+    position: relative;
+    pointer-events: auto;
+    z-index: var(--bs-modal-zindex) !important;
+}
+
+.modal-content {
+    position: relative;
+    pointer-events: auto;
+    background-color: var(--card-bg);
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-backdrop + .modal-backdrop {
+    opacity: 0.1;
+}
+
+.modal.show ~ .modal.show {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure form controls are always clickable in modals */
+.modal .form-control,
+.modal .form-select,
+.modal .btn {
+    position: relative;
+    z-index: auto;
+}
+
+.modal .form-control:focus,
+.modal .form-select:focus,
+.modal .btn:focus {
+    z-index: 1;
+}
+
+/* Fix modal input click and focus handling */
+.modal-open .modal {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.modal-dialog {
+    margin: 1.75rem auto;
+    max-width: 500px;
+}
+
+.modal .modal-content {
+    pointer-events: auto;
+}
+
+.modal .form-group {
+    position: relative;
+    z-index: 1;
+}
+
+.modal .form-control,
+.modal .form-select,
+.modal .input-group,
+.modal .btn {
+    position: relative;
+    z-index: 2;
+}
+
+.modal .input-group .form-control:focus,
+.modal .input-group .form-select:focus,
+.modal .input-group .btn:focus {
+    z-index: 3;
+}
+
 /* Custom Dashboard Elements */
 .stats-card {
     text-align: center;
@@ -384,6 +534,41 @@ canvas {
 
 .fade-in {
     animation: fadeIn 0.5s ease forwards;
+}
+
+/* Floating Action Button */
+.fab-button {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1030;
+}
+
+.fab-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    background-color: #00b673;
+}
+
+.fab-button:active {
+    transform: translateY(0);
+}
+
+.fab-button i {
+    line-height: 1;
 }
 
 /* Responsive Adjustments */
@@ -421,4 +606,128 @@ canvas {
     .btn {
         -webkit-appearance: none;
     }
+
+    /* Safari-specific modal fixes */
+    .modal-open .modal {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+
+    .modal-content {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+
+    .modal input,
+    .modal select,
+    .modal textarea,
+    .modal button {
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+    }
+}
+
+/* Fix modal stacking and focus */
+.modal-open .modal-backdrop {
+    opacity: 0.5 !important;
+}
+
+.modal-open .modal.show {
+    display: block !important;
+}
+
+.modal {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-dialog {
+    transform: none;
+    margin: 1.75rem auto;
+}
+
+/* Modal Stacking Refinements */
+.modal-backdrop {
+    --bs-backdrop-opacity: 0.5;
+}
+
+.modal-backdrop.show {
+    opacity: var(--bs-backdrop-opacity);
+}
+
+.modal-backdrop.sub-backdrop {
+    --bs-backdrop-opacity: 0.2;
+    background-color: var(--dark-bg);
+}
+
+.modal.sub-modal {
+    background: transparent !important;
+}
+
+.modal.sub-modal .modal-content {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.modal.show .modal-content {
+    animation: modalIn 0.2s ease-out;
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ensure proper modal backdrop layering */
+.modal-backdrop {
+    --bs-backdrop-zindex: 1040;
+    --bs-backdrop-bg: rgba(0, 0, 0, 0.5);
+    background-color: var(--bs-backdrop-bg) !important;
+    z-index: var(--bs-backdrop-zindex) !important;
+}
+
+.modal-backdrop ~ .modal-backdrop {
+    --bs-backdrop-bg: rgba(0, 0, 0, 0.3);
+    z-index: calc(var(--bs-backdrop-zindex) + 10) !important;
+}
+
+.modal-backdrop ~ .modal-backdrop ~ .modal-backdrop {
+    --bs-backdrop-bg: rgba(0, 0, 0, 0.1);
+    z-index: calc(var(--bs-backdrop-zindex) + 20) !important;
+}
+
+/* Force backdrop below modal content */
+.modal-dialog {
+    position: relative;
+    z-index: calc(var(--bs-backdrop-zindex) + 15) !important;
+}
+
+/* Modal and Backdrop Stacking */
+.modal-backdrop {
+    z-index: var(--backdrop-base-z) !important;
+}
+
+.modal {
+    z-index: var(--modal-base-z) !important;
+}
+
+.modal ~ .modal-backdrop {
+    z-index: calc(var(--backdrop-base-z) + 10) !important;
+    opacity: 0.3 !important;
+}
+
+.modal ~ .modal {
+    z-index: calc(var(--modal-base-z) + 10) !important;
+}
+
+.modal ~ .modal ~ .modal-backdrop {
+    z-index: calc(var(--backdrop-base-z) + 20) !important;
+    opacity: 0.1 !important;
+}
+
+.modal ~ .modal ~ .modal {
+    z-index: calc(var(--modal-base-z) + 20) !important;
 }

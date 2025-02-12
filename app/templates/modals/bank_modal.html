@@ -1,70 +1,23 @@
 <!-- Novo Banco Modal -->
-<div class="modal fade" id="newBankModal" tabindex="-1" aria-labelledby="newBankModalLabel" aria-hidden="true">
+<div class="modal fade" id="newBankModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newBankModalLabel">Novo Banco</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Novo Banco</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="newBankForm" method="POST" action="{{ url_for('main.add_bank_ajax') }}">
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label for="bank_name">Nome do Banco</label>
-                        <input type="text" class="form-control" id="bank_name" name="name" required>
+                    <div class="form-group mb-3">
+                        <label for="bank_name" class="form-label">Nome do Banco</label>
+                        <input type="text" class="form-control" id="bank_name" name="name" required tabindex="1">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" tabindex="3">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" tabindex="2">Adicionar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const bankForm = document.getElementById('newBankForm');
-    if (bankForm) {
-        bankForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            
-            fetch(this.action, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const select = document.getElementById('bank_id');
-                    const option = new Option(data.bank.name, data.bank.id);
-                    select.add(option);
-                    select.value = data.bank.id;
-                    
-                    const bankModal = document.getElementById('newBankModal');
-                    const accountModal = document.getElementById('newAccountModal');
-                    
-                    if (bankModal) {
-                        const bsBankModal = bootstrap.Modal.getInstance(bankModal);
-                        if (bsBankModal) {
-                            bsBankModal.hide();
-                            setTimeout(() => {
-                                if (accountModal) {
-                                    const bsAccountModal = bootstrap.Modal.getInstance(accountModal) || new bootstrap.Modal(accountModal);
-                                    bsAccountModal.show();
-                                }
-                            }, 150);
-                        }
-                    }
-                    
-                    this.reset();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
-    }
-});
-</script>

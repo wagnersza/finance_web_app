@@ -2,6 +2,7 @@
 
 {% block head_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -70,134 +71,560 @@
     </div>
 </div>
 
+<!-- Floating Action Button for Quick Expense -->
+<button class="fab-button" type="button" data-bs-toggle="modal" data-bs-target="#quickExpenseModal">
+    <i class="bi bi-plus-lg"></i>
+</button>
+
+<!-- Quick Expense Modal -->
+<div class="modal" id="quickExpenseModal" tabindex="-1" aria-labelledby="quickExpenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickExpenseModalLabel">Nova Transação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickExpenseForm" method="POST" action="{{ url_for('main.add_expense') }}">
+                <div class="modal-body">
+                    <div class="form-group mb-4">
+                        <div class="btn-group w-100" role="group" aria-label="Transaction Type">
+                            <input type="radio" class="btn-check" name="type" id="quick_expense" value="expense" checked>
+                            <label class="btn btn-outline-danger w-50" for="quick_expense">Despesa</label>
+                            
+                            <input type="radio" class="btn-check" name="type" id="quick_revenue" value="revenue">
+                            <label class="btn btn-outline-success w-50" for="quick_revenue">Receita</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="quick_description" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="quick_description" name="description" required>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="quick_category_id" class="form-label">Categoria</label>
+                        <div class="input-group">
+                            <select class="form-select" id="quick_category_id" name="category_id" required>
+                                <option value="">Selecione uma categoria</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newCategoryModal">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="quick_account_id" class="form-label">Conta</label>
+                        <div class="input-group">
+                            <select class="form-select" id="quick_account_id" name="account_id" required>
+                                <option value="">Selecione uma conta</option>
+                                {% for account in accounts %}
+                                <option value="{{ account.id }}">{{ account.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newAccountModal">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quick_amount" class="form-label">Valor</label>
+                        <div class="input-group">
+                            <span class="input-group-text quick-currency-symbol"></span>
+                            <input type="text" 
+                                class="form-control text-end" 
+                                id="quick_amount" 
+                                name="amount" 
+                                required 
+                                placeholder="0,00"
+                                pattern="[0-9]*[.,]?[0-9]{0,2}"
+                                inputmode="decimal">
+                        </div>
+                        <div class="form-text">Use ponto ou vírgula para decimais (ex: 10.50 ou 10,50)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Include other required modals -->
+{% include 'modals/category_modal.html' %}
+{% include 'modals/account_modal.html' %}
+{% include 'modals/bank_modal.html' %}
+{% include 'modals/currency_modal.html' %}
+
 {% block scripts %}
 <script>
-// Safari-safe initialization
-window.addEventListener('load', function() {
-    // Ensure all elements are fully loaded before initializing charts
-    setTimeout(function() {
-        try {
-            // Parse data from server-side
-            const categoryLabels = {{ category_labels|tojson|safe }} || [];
-            const categoryAmounts = {{ category_amounts|tojson|safe }} || [];
-            const monthlyLabels = {{ monthly_labels|tojson|safe }} || [];
-            const monthlyAmounts = {{ monthly_amounts|tojson|safe }} || [];
-            const defaultCurrencySymbol = '{{ default_currency.symbol|safe }}';
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize modal instances
+    const modalInstances = {};
+    const modals = document.querySelectorAll('.modal');
+    
+    // Shared data
+    let accounts, currencies;
+    try {
+        accounts = {{ accounts|tojson|safe }} || [];
+        currencies = {{ currencies|tojson|safe }} || [];
+    } catch (e) {
+        console.error('Error initializing data:', e);
+        accounts = [];
+        currencies = [];
+    }
 
-            // Initialize category chart
-            const categoryCtx = document.getElementById('expensesByCategory');
-            if (categoryCtx && categoryCtx.getContext) {
-                const ctx = categoryCtx.getContext('2d');
-                if (ctx) {
-                    new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: categoryLabels,
-                            datasets: [{
-                                data: categoryAmounts,
-                                backgroundColor: [
-                                    '#FF6384',
-                                    '#36A2EB',
-                                    '#FFCE56',
-                                    '#4BC0C0',
-                                    '#9966FF',
-                                    '#FF9F40'
-                                ]
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'right',
-                                    labels: {
-                                        font: {
-                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const label = context.label || '';
-                                            const value = context.parsed || 0;
-                                            return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)}`;
-                                        }
+    // Chart initialization
+    try {
+        const categoryLabels = {{ category_labels|tojson|safe }} || [];
+        const categoryAmounts = {{ category_amounts|tojson|safe }} || [];
+        const monthlyLabels = {{ monthly_labels|tojson|safe }} || [];
+        const monthlyAmounts = {{ monthly_amounts|tojson|safe }} || [];
+        const defaultCurrencySymbol = '{{ default_currency.symbol|safe }}';
+
+        initializeCategoryChart(categoryLabels, categoryAmounts, defaultCurrencySymbol);
+        initializeMonthlyChart(monthlyLabels, monthlyAmounts, defaultCurrencySymbol);
+    } catch (error) {
+        console.error('Error initializing charts:', error);
+    }
+
+    // Initialize modals with proper stacking and focus management
+    modals.forEach(modal => {
+        modalInstances[modal.id] = new bootstrap.Modal(modal, {
+            backdrop: false, // We'll handle backdrop manually
+            keyboard: true,
+            focus: true
+        });
+
+        // Create backdrop for each modal
+        const backdrop = document.createElement('div');
+        backdrop.className = `modal-backdrop fade`;
+        backdrop.dataset.modalId = modal.id;
+        document.body.appendChild(backdrop);
+
+        modal.addEventListener('show.bs.modal', function() {
+            const openModals = Array.from(document.querySelectorAll('.modal.show'));
+            const level = openModals.length;
+            
+            // Show this modal's backdrop
+            const thisBackdrop = document.querySelector(`.modal-backdrop[data-modal-id="${modal.id}"]`);
+            if (thisBackdrop) {
+                thisBackdrop.classList.add('show');
+                thisBackdrop.style.opacity = Math.max(0.1, 0.5 - (level * 0.2));
+            }
+
+            // Store parent modal
+            const parentModal = openModals[openModals.length - 1];
+            if (parentModal && parentModal !== modal) {
+                modal.dataset.parentModal = parentModal.id;
+            }
+        });
+
+        modal.addEventListener('hidden.bs.modal', function() {
+            // Hide this modal's backdrop
+            const thisBackdrop = document.querySelector(`.modal-backdrop[data-modal-id="${modal.id}"]`);
+            if (thisBackdrop) {
+                thisBackdrop.classList.remove('show');
+            }
+
+            // Handle parent modal restore
+            const parentModalId = modal.dataset.parentModal;
+            if (parentModalId) {
+                const parentModal = document.getElementById(parentModalId);
+                if (parentModal) {
+                    setTimeout(() => {
+                        parentModal.style.display = 'block';
+                        parentModal.classList.add('show');
+                        const firstInput = parentModal.querySelector('input, select');
+                        if (firstInput) {
+                            firstInput.focus();
+                        }
+                    }, 150);
+                }
+                delete modal.dataset.parentModal;
+            }
+        });
+
+        // Handle focus and click events
+        modal.addEventListener('shown.bs.modal', function() {
+            const firstInput = modal.querySelector('input, select');
+            if (firstInput) {
+                firstInput.focus();
+            }
+
+            // Enable clicking inside this modal
+            modal.style.pointerEvents = 'auto';
+        });
+
+        // Enable clicking inside modal content
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+
+        // Enable form controls interaction
+        const formControls = modal.querySelectorAll('input, select, textarea, button');
+        formControls.forEach(control => {
+            control.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.focus();
+            });
+            
+            control.addEventListener('mousedown', function(e) {
+                e.stopPropagation();
+            });
+        });
+    });
+
+    // Handle sub-modal triggers
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('[data-bs-toggle="modal"]');
+        if (button) {
+            event.preventDefault();
+            const targetModalId = button.getAttribute('data-bs-target');
+            const targetModal = document.querySelector(targetModalId);
+            
+            if (targetModal) {
+                const currentModal = button.closest('.modal');
+                if (currentModal) {
+                    targetModal.dataset.parentModal = currentModal.id;
+                }
+                const modalInstance = modalInstances[targetModalId.replace('#', '')];
+                if (modalInstance) {
+                    modalInstance.show();
+                }
+            }
+        }
+    });
+
+    // Quick Expense Modal Handling
+    const quickExpenseModal = document.getElementById('quickExpenseModal');
+    const quickAmountInput = document.getElementById('quick_amount');
+    const quickAccountSelect = document.getElementById('quick_account_id');
+    const quickCurrencySymbol = quickExpenseModal?.querySelector('.quick-currency-symbol');
+    const quickExpenseForm = document.getElementById('quickExpenseForm');
+
+    // Update amount format based on selected account
+    function updateQuickAmountFormat() {
+        const accountId = quickAccountSelect?.value;
+        if (accountId && quickCurrencySymbol) {
+            try {
+                const account = accounts.find(a => a.id == accountId);
+                if (account) {
+                    const currency = currencies.find(c => c.id == account.currency_id);
+                    if (currency) {
+                        quickCurrencySymbol.textContent = currency.symbol;
+                        if (quickAmountInput) {
+                            quickAmountInput.placeholder = '0,00';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error updating quick amount format:', e);
+            }
+        }
+    }
+
+    // Setup Ajax form handlers
+    function setupAjaxForm(formId, onSuccess) {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Call success callback
+                        onSuccess(data);
+                        
+                        // Find and handle the modal
+                        const modal = this.closest('.modal');
+                        if (modal) {
+                            const instance = bootstrap.Modal.getInstance(modal);
+                            if (instance) {
+                                instance.hide();
+                                
+                                // Handle parent modal
+                                const parentModalId = modal.dataset.parentModal;
+                                if (parentModalId) {
+                                    const parentModal = document.getElementById(parentModalId);
+                                    if (parentModal) {
+                                        setTimeout(() => {
+                                            parentModal.style.display = 'block';
+                                            parentModal.classList.add('show');
+                                            const firstInput = parentModal.querySelector('input, select');
+                                            if (firstInput) {
+                                                firstInput.focus();
+                                            }
+                                        }, 150);
                                     }
                                 }
                             }
                         }
-                    });
+                        
+                        // Reset form
+                        this.reset();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting form:', error);
+                });
+            });
+        }
+    }
+
+    // Override modal event handlers to ensure proper focus and click behavior
+    document.addEventListener('click', function(event) {
+        const modalContent = event.target.closest('.modal-content');
+        if (modalContent) {
+            event.stopPropagation();
+        }
+    }, true);
+
+    // Ensure modals can receive focus
+    modals.forEach(modal => {
+        modal.addEventListener('mousedown', function(event) {
+            if (event.target === modal) {
+                event.preventDefault();
+            }
+        });
+
+        // Enable clicking inside modal content
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.addEventListener('mousedown', function(event) {
+                event.stopPropagation();
+            });
+        }
+    });
+
+    // Ensure proper click handling in nested modals
+    modals.forEach(modal => {
+        const inputs = modal.querySelectorAll('input, select, textarea, button');
+        inputs.forEach(input => {
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+                input.focus();
+            });
+            
+            input.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+        });
+    });
+    
+    // Fix backdrop click behavior
+    document.addEventListener('click', function(e) {
+        const activeModals = Array.from(document.querySelectorAll('.modal.show'));
+        if (activeModals.length > 0) {
+            const topModal = activeModals[activeModals.length - 1];
+            if (e.target === topModal) {
+                const modalContent = topModal.querySelector('.modal-content');
+                if (!modalContent.contains(e.target)) {
+                    e.preventDefault();
+                    e.stopPropagation();
                 }
             }
+        }
+    }, true);
 
-            // Initialize monthly chart
-            const monthlyCtx = document.getElementById('monthlyExpenses');
-            if (monthlyCtx && monthlyCtx.getContext) {
-                const ctx = monthlyCtx.getContext('2d');
-                if (ctx) {
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: monthlyLabels,
-                            datasets: [{
-                                label: 'Total de Despesas',
-                                data: monthlyAmounts,
-                                borderColor: '#36A2EB',
-                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                                fill: true,
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    labels: {
-                                        font: {
-                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            return `${defaultCurrencySymbol} ${context.parsed.y.toFixed(2)}`;
-                                        }
+    // Initialize form handlers
+    setupAjaxForm('newCategoryForm', function(data) {
+        updateSelects('[name="category_id"]', data.category.name, data.category.id);
+    });
+
+    setupAjaxForm('newAccountForm', function(data) {
+        updateSelects('[name="account_id"]', data.account.name, data.account.id);
+        updateQuickAmountFormat();
+    });
+
+    setupAjaxForm('newBankForm', function(data) {
+        updateSelects('[name="bank_id"]', data.bank.name, data.bank.id);
+    });
+
+    setupAjaxForm('newCurrencyForm', function(data) {
+        updateSelects('[name="currency_id"]', `${data.currency.code} - ${data.currency.name}`, data.currency.id);
+    });
+
+    // Helper function to update select elements
+    function updateSelects(selector, label, value) {
+        const selects = document.querySelectorAll(selector);
+        selects.forEach(select => {
+            const option = new Option(label, value);
+            select.add(option);
+            select.value = value;
+        });
+    }
+
+    // Quick expense modal event handlers
+    if (quickExpenseModal) {
+        quickExpenseModal.addEventListener('show.bs.modal', updateQuickAmountFormat);
+        quickAccountSelect?.addEventListener('change', updateQuickAmountFormat);
+
+        if (quickAmountInput) {
+            quickAmountInput.addEventListener('input', function(e) {
+                let value = e.target.value;
+                value = value.replace(/[^\d.,]/g, '');
+                value = value.replace(',', '.');
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                if (value.includes('.')) {
+                    const decimals = value.split('.')[1];
+                    if (decimals.length > 2) {
+                        value = parseFloat(value).toFixed(2);
+                    }
+                }
+                e.target.value = value;
+            });
+        }
+
+        if (quickExpenseForm) {
+            quickExpenseForm.addEventListener('submit', function(e) {
+                const value = quickAmountInput?.value;
+                if (value) {
+                    quickAmountInput.value = parseFloat(value.replace(',', '.')).toFixed(2);
+                }
+            });
+        }
+    }
+});
+
+// Chart initialization functions
+function initializeCategoryChart(categoryLabels, categoryAmounts, defaultCurrencySymbol) {
+    const categoryCtx = document.getElementById('expensesByCategory');
+    if (categoryCtx && categoryCtx.getContext) {
+        try {
+            const ctx = categoryCtx.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categoryLabels,
+                        datasets: [{
+                            data: categoryAmounts,
+                            backgroundColor: [
+                                '#FF6384',
+                                '#36A2EB',
+                                '#FFCE56',
+                                '#4BC0C0',
+                                '#9966FF',
+                                '#FF9F40'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: {
+                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
                                     }
                                 }
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            return defaultCurrencySymbol + ' ' + value.toFixed(2);
-                                        },
-                                        font: {
-                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                        }
-                                    }
-                                },
-                                x: {
-                                    ticks: {
-                                        font: {
-                                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                        }
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)}`;
                                     }
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
             }
         } catch (error) {
-            console.error('Error initializing charts:', error);
+            console.error('Error initializing category chart:', error);
         }
-    }, 0);
-});
+    }
+}
+
+function initializeMonthlyChart(monthlyLabels, monthlyAmounts, defaultCurrencySymbol) {
+    const monthlyCtx = document.getElementById('monthlyExpenses');
+    if (monthlyCtx && monthlyCtx.getContext) {
+        try {
+            const ctx = monthlyCtx.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyLabels,
+                        datasets: [{
+                            label: 'Total de Despesas',
+                            data: monthlyAmounts,
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    font: {
+                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${defaultCurrencySymbol} ${context.parsed.y.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return defaultCurrencySymbol + ' ' + value.toFixed(2);
+                                    },
+                                    font: {
+                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error initializing monthly chart:', error);
+        }
+    }
+}
 </script>
 {% endblock %}
 {% endblock %}

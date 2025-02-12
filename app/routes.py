@@ -63,6 +63,12 @@ def index():
     
     # Get default currency (USD)
     default_currency = Currency.query.filter_by(code='USD').first()
+    default_currency_dict = {
+        'id': default_currency.id,
+        'code': default_currency.code,
+        'name': default_currency.name,
+        'symbol': default_currency.symbol
+    } if default_currency else None
     
     # Calculate account balances (considering both expenses and revenues)
     for account in accounts:
@@ -78,13 +84,39 @@ def index():
         
         account.balance = revenues_total - expenses_total
     
+    # Get categories and currencies for the quick expense form
+    categories = Category.query.all()
+    currencies = [
+        {
+            'id': c.id,
+            'code': c.code,
+            'name': c.name,
+            'symbol': c.symbol
+        } for c in Currency.query.all()
+    ]
+    
     return render_template('index.html',
-                         accounts=accounts,
+                         accounts=[{
+                             'id': a.id,
+                             'name': a.name,
+                             'currency_id': a.currency_id,
+                             'bank': {'name': a.bank.name},
+                             'currency': {
+                                 'code': a.currency.code,
+                                 'symbol': a.currency.symbol
+                             },
+                             'balance': a.balance
+                         } for a in accounts],
+                         categories=[{
+                             'id': c.id,
+                             'name': c.name
+                         } for c in categories],
+                         currencies=currencies,
                          category_labels=category_labels,
                          category_amounts=category_amounts,
                          monthly_labels=monthly_labels,
                          monthly_amounts=monthly_amounts,
-                         default_currency=default_currency)
+                         default_currency=default_currency_dict)
 
 @main.route('/banks', methods=['GET', 'POST'])
 def banks():
@@ -153,20 +185,23 @@ def expenses():
 def add_expense():
     if request.method == 'POST':
         try:
+            print("Form data received:", request.form)  # Debug line
+            
             # Clean and parse amount value
             raw_amount = request.form.get('amount', '0')
-            amount = float(raw_amount.replace(
-                request.form.get('currency_symbol', '').strip(), ''
-            ).replace(',', '.').strip())
+            amount = float(raw_amount.replace(',', '.').strip())
             
             description = request.form.get('description')
             category_id = request.form.get('category_id')
             account_id = request.form.get('account_id')
             transaction_type = request.form.get('type', 'expense')
             
+            if not all([description, category_id, account_id]):
+                raise ValueError("Missing required fields")
+
             # Create and save the expense
             expense = Expense(
-                amount=abs(amount),
+                amount=abs(amount),  # Always store positive amount
                 description=description,
                 category_id=category_id,
                 account_id=account_id,
@@ -178,14 +213,25 @@ def add_expense():
             expense.update_account_balance()
             db.session.commit()
             
+            flash('Transaction added successfully!', 'success')
+            
+            # Redirect based on referrer
+            if request.referrer and 'index' in request.referrer:
+                return redirect(url_for('main.index'))
             return redirect(url_for('main.expenses'))
             
+        except ValueError as e:
+            print(f"Validation error: {str(e)}")
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'error')
+            return redirect(request.referrer or url_for('main.index'))
         except Exception as e:
             print(f"Error adding expense: {str(e)}")
             db.session.rollback()
-            flash('Error adding expense: ' + str(e), 'error')
-            return redirect(url_for('main.add_expense'))
+            flash('Error adding transaction. Please try again.', 'error')
+            return redirect(request.referrer or url_for('main.index'))
     
+    # GET request handling
     categories = Category.query.all()
     accounts = [
         {

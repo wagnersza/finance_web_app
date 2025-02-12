@@ -7,7 +7,6 @@ This web application is an extension of the Personal Finance App, designed to he
 - Expense tracking
 - Budget management
 - Reporting
-- User authentication
 - Responsive design
 
 ## Setup
