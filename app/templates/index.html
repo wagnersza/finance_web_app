@@ -47,7 +47,7 @@
                                 <tr>
                                     <th>Conta</th>
                                     <th>Banco</th>
-                                    <th class="text-right">Saldo</th>
+                                    <th class="text-end">Saldo</th>
                                     <th>Moeda</th>
                                 </tr>
                             </thead>
@@ -56,8 +56,8 @@
                                 <tr>
                                     <td>{{ account.name }}</td>
                                     <td>{{ account.bank.name }}</td>
-                                    <td class="text-right {{ 'text-danger' if account.balance < 0 else 'text-success' }}">
-                                        {{ account.currency.symbol }} {{ "%.2f"|format(account.balance) }}
+                                    <td class="text-end {{ 'text-danger' if account.balance < 0 else 'text-success' }}" data-type="currency">
+                                        {{ account.currency.symbol }} {{ "{:,.2f}".format(account.balance).replace(",", "X").replace(".", ",").replace("X", ".") }}
                                     </td>
                                     <td>{{ account.currency.code }}</td>
                                 </tr>
@@ -481,17 +481,24 @@ document.addEventListener('DOMContentLoaded', function() {
             quickAmountInput.addEventListener('input', function(e) {
                 let value = e.target.value;
                 value = value.replace(/[^\d.,]/g, '');
-                value = value.replace(',', '.');
-                const parts = value.split('.');
+                value = value.replace('.', ',');
+                
+                const parts = value.split(',');
                 if (parts.length > 2) {
-                    value = parts[0] + '.' + parts.slice(1).join('');
+                    value = parts[0] + ',' + parts.slice(1).join('');
                 }
-                if (value.includes('.')) {
-                    const decimals = value.split('.')[1];
-                    if (decimals.length > 2) {
-                        value = parseFloat(value).toFixed(2);
-                    }
+                
+                // Format thousands with dots
+                if (parts[0].length > 3) {
+                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                 }
+                
+                // Limit decimal places to 2
+                if (parts[1] && parts[1].length > 2) {
+                    parts[1] = parts[1].substring(0, 2);
+                }
+                
+                value = parts.join(',');
                 e.target.value = value;
             });
         }
@@ -500,7 +507,8 @@ document.addEventListener('DOMContentLoaded', function() {
             quickExpenseForm.addEventListener('submit', function(e) {
                 const value = quickAmountInput?.value;
                 if (value) {
-                    quickAmountInput.value = parseFloat(value.replace(',', '.')).toFixed(2);
+                    // Convert from Brazilian format (1.234,56) to standard format (1234.56)
+                    quickAmountInput.value = value.replace(/\./g, '').replace(',', '.');
                 }
             });
         }
@@ -566,7 +574,7 @@ function initializeCategoryChart(categoryLabels, categoryExpenses, categoryReven
                                             percentage = ((value / totalForType) * 100).toFixed(1);
                                         }
                                         
-                                        return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)} (${percentage}%)`;
+                                        return `${label}: ${defaultCurrencySymbol} ${formatCurrency(value)} (${percentage}%)`;
                                     }
                                 },
                                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -598,7 +606,7 @@ function initializeCategoryChart(categoryLabels, categoryExpenses, categoryReven
                                 beginAtZero: true,
                                 ticks: {
                                     callback: function(value) {
-                                        return defaultCurrencySymbol + ' ' + value.toFixed(2);
+                                        return defaultCurrencySymbol + ' ' + formatCurrency(value);
                                     },
                                     font: {
                                         family: 'Inter, -apple-system, sans-serif',
@@ -701,7 +709,7 @@ function initializeMonthlyChart(monthlyLabels, monthlyExpenses, monthlyRevenues,
                                                 : ` (${percentChange}%)`;
                                         }
                                         
-                                        return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)}${change}`;
+                                        return `${label}: ${defaultCurrencySymbol} ${formatCurrency(value)}${change}`;
                                     }
                                 },
                                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -722,7 +730,7 @@ function initializeMonthlyChart(monthlyLabels, monthlyExpenses, monthlyRevenues,
                                 max: maxAmount + buffer,
                                 ticks: {
                                     callback: function(value) {
-                                        return defaultCurrencySymbol + ' ' + value.toFixed(2);
+                                        return defaultCurrencySymbol + ' ' + formatCurrency(value);
                                     },
                                     font: {
                                         family: 'Inter, -apple-system, sans-serif',
@@ -755,6 +763,14 @@ function initializeMonthlyChart(monthlyLabels, monthlyExpenses, monthlyRevenues,
             console.error('Error initializing monthly chart:', error);
         }
     }
+}
+
+function formatCurrency(value) {
+    return value.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true
+    });
 }
 </script>
 {% endblock %}

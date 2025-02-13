@@ -82,7 +82,7 @@
                                 </select>
                             </td>
                             <td class="{{ 'text-danger' if account.balance < 0 else 'text-success' }}">
-                                {{ account.currency.symbol }}{{ "%.2f"|format(account.balance) }}
+                                {{ account.currency.symbol }} {{ "{:,.2f}".format(account.balance).replace(",", "X").replace(".", ",").replace("X", ".") }}
                             </td>
                             <td>
                                 <div class="btn-group">

@@ -3,6 +3,10 @@ from .models import db, Bank, Account, Currency, Expense, Category, Budget, Inco
 from datetime import datetime, timedelta
 from sqlalchemy import func, case
 import calendar
+import locale
+
+# Set locale for number formatting
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 app = Flask(__name__)
 main = Blueprint('main', __name__)
@@ -15,6 +19,13 @@ def calculate_account_balances(accounts):
         total_incomes = db.session.query(func.sum(Income.amount)).filter(Income.account_id == account.id).scalar() or 0
         # Calculate net balance (incomes - expenses)
         account.balance = total_incomes - total_expenses
+
+def format_currency(value):
+    """Format currency value to Brazilian format"""
+    try:
+        return locale.format_string('%.2f', float(value), grouping=True)
+    except:
+        return f"{float(value):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 @main.route('/')
 def index():
@@ -266,9 +277,10 @@ def add_expense():
         try:
             print("Form data received:", request.form)  # Debug line
             
-            # Clean and parse amount value
+            # Clean and parse amount value - handle Brazilian number format
             raw_amount = request.form.get('amount', '0')
-            amount = float(raw_amount.replace(',', '.').strip())
+            # Convert from Brazilian format (1.234,56) to standard format (1234.56)
+            amount = float(raw_amount.replace('.', '').replace(',', '.').strip())
             
             description = request.form.get('description')
             category_id = request.form.get('category_id')

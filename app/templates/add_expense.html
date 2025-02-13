@@ -271,27 +271,40 @@ window.addEventListener('load', function() {
 
     amountInput.addEventListener('input', function(e) {
         let value = e.target.value;
+        // Remove any character that isn't a number, comma or dot
         value = value.replace(/[^\d.,]/g, '');
-        value = value.replace(',', '.');
-        const parts = value.split('.');
+        
+        // Replace dots with commas for consistency
+        value = value.replace('.', ',');
+        
+        // Only allow one comma
+        const parts = value.split(',');
         if (parts.length > 2) {
-            value = parts[0] + '.' + parts.slice(1).join('');
+            value = parts[0] + ',' + parts.slice(1).join('');
         }
-        if (value.includes('.')) {
-            const decimals = value.split('.')[1];
-            if (decimals.length > 2) {
-                value = parseFloat(value).toFixed(2);
-            }
+        
+        // Format thousands with dots
+        if (parts[0].length > 3) {
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         }
+        
+        // Limit decimal places to 2
+        if (parts[1] && parts[1].length > 2) {
+            parts[1] = parts[1].substring(0, 2);
+        }
+        
+        // Reconstruct the value
+        value = parts.join(',');
         e.target.value = value;
     });
 
     // Format on form submission
     document.querySelector('form').addEventListener('submit', function(e) {
-        let value = amountInput.value;
+        const value = amountInput.value;
         if (value) {
-            value = value.replace(',', '.');
-            amountInput.value = parseFloat(value).toFixed(2);
+            // Convert from Brazilian format (1.234,56) to standard format (1234.56)
+            const standardFormat = value.replace(/\./g, '').replace(',', '.');
+            amountInput.value = standardFormat;
         }
     });
 

@@ -127,6 +127,88 @@
                 link.classList.add('active');
             }
         });
+
+        // Add global currency formatter
+        window.formatCurrency = function(value) {
+            if (typeof value !== 'number') {
+                value = parseFloat(value.toString().replace(/[^\d.-]/g, '')) || 0;
+            }
+            return value.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+                useGrouping: true
+            });
+        };
+
+        // Format all currency elements on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Format all elements with data-type="currency"
+            document.querySelectorAll('[data-type="currency"]').forEach(element => {
+                const value = parseFloat(element.textContent.replace(/[^\d.-]/g, '')) || 0;
+                element.textContent = formatCurrency(value);
+            });
+
+            // Format all currency inputs
+            document.querySelectorAll('input[data-type="currency"]').forEach(input => {
+                input.addEventListener('input', (e) => handleCurrencyInput(e.target));
+                input.addEventListener('blur', (e) => {
+                    const value = e.target.value.replace(/[^\d,-]/g, '');
+                    if (value) {
+                        const parts = value.split(',');
+                        if (parts[1] === undefined) parts[1] = '00';
+                        else if (parts[1].length === 1) parts[1] += '0';
+                        e.target.value = formatCurrency(parseFloat(value.replace(',', '.')));
+                    }
+                });
+            });
+        });
+
+        // Add global currency formatter
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Currency input handler
+        function handleCurrencyInput(input) {
+            let value = input.value;
+            value = value.replace(/[^\d.,]/g, '');
+            value = value.replace('.', ',');
+            
+            const parts = value.split(',');
+            if (parts.length > 2) {
+                value = parts[0] + ',' + parts.slice(1).join('');
+            }
+            
+            if (parts[0].length > 3) {
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            }
+            
+            if (parts[1] && parts[1].length > 2) {
+                parts[1] = parts[1].substring(0, 2);
+            }
+            
+            input.value = parts.join(',');
+        }
+
+        // Apply to all currency inputs
+        document.querySelectorAll('input[data-type="currency"]').forEach(input => {
+            input.addEventListener('input', (e) => handleCurrencyInput(e.target));
+        });
+
+        // Handle form submissions with currency values
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                this.querySelectorAll('input[data-type="currency"]').forEach(input => {
+                    const value = input.value;
+                    if (value) {
+                        input.value = value.replace(/\./g, '').replace(',', '.');
+                    }
+                });
+            });
+        });
     });
     </script>
     {% block scripts %}{% endblock %}

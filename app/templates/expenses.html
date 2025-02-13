@@ -13,7 +13,7 @@
                 <th>Data</th>
                 <th>Descrição</th>
                 <th>Tipo</th>
-                <th class="text-right">Valor</th>
+                <th class="text-end">Valor</th>
                 <th>Categoria</th>
                 <th>Conta</th>
             </tr>
@@ -26,8 +26,8 @@
                 <td><span class="badge {{ 'bg-danger' if expense.is_expense else 'bg-success' }}">
                     {{ 'Despesa' if expense.is_expense else 'Receita' }}
                 </span></td>
-                <td class="text-right {{ 'text-danger' if expense.is_expense else 'text-success' }}">
-                    {{ expense.account.currency.symbol }} {{ "%.2f"|format(expense.amount) }}
+                <td class="text-end {{ 'text-danger' if expense.is_expense else 'text-success' }}" data-type="currency">
+                    {{ expense.account.currency.symbol }} {{ "{:,.2f}".format(expense.amount).replace(",", "X").replace(".", ",").replace("X", ".") }}
                 </td>
                 <td>{{ expense.category.name if expense.category else 'N/A' }}</td>
                 <td>{{ expense.account.name if expense.account else 'N/A' }}</td>
