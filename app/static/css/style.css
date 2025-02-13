@@ -1,3 +1,40 @@
+/* Theme Variables */
+:root[data-theme="dark"] {
+    --primary-color: #00d084;
+    --bg-color: #1a1a1a;
+    --card-bg: #242424;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --input-bg: #2a2a2a;
+    --input-border: rgba(255, 255, 255, 0.1);
+    --table-hover: #2a2a2a;
+    --backdrop-base-z: 1040;
+    --modal-base-z: 1050;
+    --navbar-bg: #242424;
+    --navbar-text: #ffffff;
+    --navbar-active: #00d084;
+    --navbar-hover: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="light"] {
+    --primary-color: #00b673;
+    --bg-color: #f4f4f4;
+    --card-bg: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --input-bg: #ffffff;
+    --input-border: #dee2e6;
+    --table-hover: #f8f9fa;
+    --backdrop-base-z: 1040;
+    --modal-base-z: 1050;
+    --navbar-bg: #ffffff;
+    --navbar-text: #333333;
+    --navbar-active: #00b673;
+    --navbar-hover: rgba(0, 0, 0, 0.05);
+}
+
 /* Modern Dark Theme */
 :root {
     --primary-color: #00d084;
@@ -9,13 +46,28 @@
     --modal-base-z: 1050;
 }
 
+/* Input appearance fixes */
+input[type="number"] {
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
 body {
-    background-color: var(--dark-bg);
+    background-color: var(--bg-color);
     color: var(--text-primary);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     line-height: 1.6;
     margin: 0;
     padding: 20px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -34,13 +86,14 @@ body {
 
 /* Navigation styles */
 .navbar {
-    background-color: var(--card-bg) !important;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    background-color: var(--navbar-bg) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     padding: 1rem 0;
+    transition: background-color 0.3s ease;
 }
 
 .navbar-brand {
-    color: var(--primary-color) !important;
+    color: var(--navbar-text) !important;
     font-weight: 600;
     font-size: 1.4rem;
 }
@@ -56,7 +109,7 @@ body {
 }
 
 .nav-link {
-    color: var(--text-primary) !important;
+    color: var(--navbar-text) !important;
     margin: 0 0.5rem;
     transition: color 0.3s ease;
     text-decoration: none;
@@ -64,7 +117,32 @@ body {
 }
 
 .nav-link:hover {
+    background-color: var(--navbar-hover);
     color: var(--primary-color) !important;
+}
+
+.nav-link.active {
+    color: var(--navbar-active) !important;
+}
+
+.navbar-toggler {
+    border-color: var(--border-color);
+}
+
+.navbar-toggler-icon {
+    background-image: none;
+    position: relative;
+}
+
+.navbar-toggler-icon::before {
+    content: "\ee3c";  /* Remix Icon menu line */
+    font-family: 'remixicon';
+    position: absolute;
+    color: var(--navbar-text);
+    font-size: 1.5rem;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .btn {
@@ -105,15 +183,28 @@ body {
     padding: 0.8rem;
     font-size: 1rem;
     line-height: 1.5;
-    background-color: var(--card-bg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
     color: var(--text-primary);
     border-radius: 8px;
     margin-bottom: 1rem;
 }
 
 .form-control:focus {
-    background-color: var(--card-bg);
+    background-color: var(--input-bg);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 2px rgba(0, 208, 132, 0.2);
+}
+
+.form-control, .form-select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--input-bg);
     border-color: var(--primary-color);
     color: var(--text-primary);
     box-shadow: 0 0 0 2px rgba(0, 208, 132, 0.2);
@@ -125,6 +216,12 @@ body {
     font-weight: bold;
     background-color: #f8f9fa;
     border-right: none;
+}
+
+.input-group-text {
+    background-color: var(--card-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
 }
 
 input[type="number"] {
@@ -182,11 +279,11 @@ input[type="number"]::-webkit-inner-spin-button {
 /* Card styles */
 .card {
     background-color: var(--card-bg);
-    border: none;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     margin-bottom: 1.5rem;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, background-color 0.3s ease;
 }
 
 .card:hover {
@@ -194,14 +291,14 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .card-header {
-    background-color: transparent;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
     padding: 1.5rem;
 }
 
 .card-header h4 {
     margin: 0;
-    color: #333;
+    color: var(--text-primary);
     font-size: 1.1rem;
 }
 
@@ -230,18 +327,18 @@ input[type="number"]::-webkit-inner-spin-button {
 .table td {
     padding: 12px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .table th {
-    background-color: #f5f5f5;
+    background-color: var(--card-bg);
     font-weight: bold;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid var(--border-color);
     color: var(--text-secondary);
 }
 
 .table tr:hover {
-    background-color: #f9f9f9;
+    background-color: var(--table-hover);
 }
 
 .table th.text-right,
@@ -349,16 +446,16 @@ canvas {
 /* Modal Styling */
 .modal-content {
     background-color: var(--card-bg);
-    border: none;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
 }
 
 .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .modal-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--border-color);
 }
 
 /* Modal Stacking */
@@ -730,4 +827,33 @@ canvas {
 
 .modal ~ .modal ~ .modal {
     z-index: calc(var(--modal-base-z) + 20) !important;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: 0.5rem;
+    margin-left: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+}
+
+.theme-toggle i {
+    font-size: 1.2rem;
+}
+
+/* Fix for Safari appearance */
+button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
