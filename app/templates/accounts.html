@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Accounts - Personal Finance App{% endblock %}
+{% block title %}Contas - Aplicativo de Finanças Pessoais{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -18,6 +18,7 @@
                     <div class="mb-3">
                         <label for="bank_id" class="form-label">Banco</label>
                         <select class="form-control" id="bank_id" name="bank_id" required>
+                            <option value="">Selecione um banco</option>
                             {% for bank in banks %}
                             <option value="{{ bank.id }}">{{ bank.name }}</option>
                             {% endfor %}
@@ -26,6 +27,7 @@
                     <div class="mb-3">
                         <label for="currency_id" class="form-label">Moeda</label>
                         <select class="form-control" id="currency_id" name="currency_id" required>
+                            <option value="">Selecione uma moeda</option>
                             {% for currency in currencies %}
                             <option value="{{ currency.id }}">{{ currency.code }} - {{ currency.name }}</option>
                             {% endfor %}
@@ -49,16 +51,57 @@
                             <th>Banco</th>
                             <th>Moeda</th>
                             <th>Saldo</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for account in accounts %}
-                        <tr>
-                            <td>{{ account.name }}</td>
-                            <td>{{ account.bank.name }}</td>
-                            <td>{{ account.currency.code }}</td>
+                        <tr id="account-{{ account.id }}">
+                            <td>
+                                <span class="account-name">{{ account.name }}</span>
+                                <input type="text" class="form-control d-none edit-account-input" value="{{ account.name }}">
+                            </td>
+                            <td>
+                                <span class="account-bank">{{ account.bank.name }}</span>
+                                <select class="form-control d-none edit-account-bank">
+                                    {% for bank in banks %}
+                                    <option value="{{ bank.id }}" {% if bank.id == account.bank_id %}selected{% endif %}>
+                                        {{ bank.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <span class="account-currency">{{ account.currency.code }}</span>
+                                <select class="form-control d-none edit-account-currency">
+                                    {% for currency in currencies %}
+                                    <option value="{{ currency.id }}" {% if currency.id == account.currency_id %}selected{% endif %}>
+                                        {{ currency.code }} - {{ currency.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
                             <td class="{{ 'text-danger' if account.balance < 0 else 'text-dark' }}">
                                 {{ account.currency.symbol }}{{ "%.2f"|format(account.balance) }}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary edit-account" data-id="{{ account.id }}">
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success d-none save-account" data-id="{{ account.id }}">
+                                        <i class="ri-check-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger d-none cancel-edit" data-id="{{ account.id }}">
+                                        <i class="ri-close-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-account" data-id="{{ account.id }}"
+                                            {% if account.expenses|length > 0 or account.incomes|length > 0 %}
+                                            disabled title="Não é possível excluir uma conta com transações"
+                                            {% endif %}>
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -68,4 +111,129 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit account
+    document.querySelectorAll('.edit-account').forEach(button => {
+        button.addEventListener('click', function() {
+            const accountId = this.dataset.id;
+            const row = document.getElementById(`account-${accountId}`);
+            
+            // Show/hide elements
+            row.querySelector('.account-name').classList.add('d-none');
+            row.querySelector('.account-bank').classList.add('d-none');
+            row.querySelector('.account-currency').classList.add('d-none');
+            row.querySelector('.edit-account-input').classList.remove('d-none');
+            row.querySelector('.edit-account-bank').classList.remove('d-none');
+            row.querySelector('.edit-account-currency').classList.remove('d-none');
+            this.classList.add('d-none');
+            row.querySelector('.save-account').classList.remove('d-none');
+            row.querySelector('.cancel-edit').classList.remove('d-none');
+            row.querySelector('.delete-account').classList.add('d-none');
+        });
+    });
+
+    // Save account edit
+    document.querySelectorAll('.save-account').forEach(button => {
+        button.addEventListener('click', async function() {
+            const accountId = this.dataset.id;
+            const row = document.getElementById(`account-${accountId}`);
+            const newName = row.querySelector('.edit-account-input').value.trim();
+            const newBankId = row.querySelector('.edit-account-bank').value;
+            const newCurrencyId = row.querySelector('.edit-account-currency').value;
+            
+            if (!newName || !newBankId || !newCurrencyId) {
+                alert('Todos os campos são obrigatórios');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/accounts/${accountId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `name=${encodeURIComponent(newName)}&bank_id=${newBankId}&currency_id=${newCurrencyId}`
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update display
+                    row.querySelector('.account-name').textContent = newName;
+                    row.querySelector('.account-bank').textContent = row.querySelector('.edit-account-bank option:checked').text;
+                    row.querySelector('.account-currency').textContent = row.querySelector('.edit-account-currency option:checked').text.split(' - ')[0];
+                    
+                    // Reset view
+                    cancelEdit(row);
+                } else {
+                    alert(data.error || 'Erro ao atualizar a conta');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erro ao atualizar a conta');
+            }
+        });
+    });
+
+    // Cancel edit
+    document.querySelectorAll('.cancel-edit').forEach(button => {
+        button.addEventListener('click', function() {
+            const accountId = this.dataset.id;
+            const row = document.getElementById(`account-${accountId}`);
+            cancelEdit(row);
+        });
+    });
+
+    function cancelEdit(row) {
+        // Reset input values
+        const nameSpan = row.querySelector('.account-name');
+        const nameInput = row.querySelector('.edit-account-input');
+        nameInput.value = nameSpan.textContent;
+        
+        // Reset view
+        nameSpan.classList.remove('d-none');
+        row.querySelector('.account-bank').classList.remove('d-none');
+        row.querySelector('.account-currency').classList.remove('d-none');
+        nameInput.classList.add('d-none');
+        row.querySelector('.edit-account-bank').classList.add('d-none');
+        row.querySelector('.edit-account-currency').classList.add('d-none');
+        row.querySelector('.edit-account').classList.remove('d-none');
+        row.querySelector('.save-account').classList.add('d-none');
+        row.querySelector('.cancel-edit').classList.add('d-none');
+        row.querySelector('.delete-account').classList.remove('d-none');
+    }
+
+    // Delete account
+    document.querySelectorAll('.delete-account').forEach(button => {
+        button.addEventListener('click', async function() {
+            if (this.disabled) return;
+            
+            if (!confirm('Tem certeza que deseja excluir esta conta?')) {
+                return;
+            }
+
+            const accountId = this.dataset.id;
+            try {
+                const response = await fetch(`/accounts/${accountId}/delete`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Remove row from table
+                    document.getElementById(`account-${accountId}`).remove();
+                } else {
+                    alert(data.error || 'Erro ao excluir a conta');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erro ao excluir a conta');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

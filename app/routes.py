@@ -170,6 +170,48 @@ def accounts():
     currencies = Currency.query.all()
     return render_template('accounts.html', accounts=accounts, banks=banks, currencies=currencies)
 
+@main.route('/accounts/<int:id>/update', methods=['POST'])
+def update_account(id):
+    account = Account.query.get_or_404(id)
+    name = request.form.get('name')
+    bank_id = request.form.get('bank_id')
+    currency_id = request.form.get('currency_id')
+
+    if not all([name, bank_id, currency_id]):
+        return jsonify({'success': False, 'error': 'Todos os campos são obrigatórios'}), 400
+
+    try:
+        account.name = name
+        account.bank_id = bank_id
+        account.currency_id = currency_id
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@main.route('/accounts/<int:id>/delete', methods=['POST'])
+def delete_account(id):
+    account = Account.query.get_or_404(id)
+    
+    # Check if account has any transactions
+    expenses_count = Expense.query.filter_by(account_id=id).count()
+    incomes_count = Income.query.filter_by(account_id=id).count()
+    
+    if expenses_count > 0 or incomes_count > 0:
+        return jsonify({
+            'success': False,
+            'error': 'Não é possível excluir uma conta que possui transações'
+        }), 400
+
+    try:
+        db.session.delete(account)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 @main.route('/expenses', methods=['GET', 'POST'])
 def expenses():
     if request.method == 'POST':
