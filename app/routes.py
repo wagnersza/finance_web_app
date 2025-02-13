@@ -130,6 +130,29 @@ def banks():
     banks = Bank.query.all()
     return render_template('banks.html', banks=banks)
 
+@main.route('/banks/<int:id>/update', methods=['POST'])
+def update_bank(id):
+    bank = Bank.query.get_or_404(id)
+    name = request.form.get('name')
+    if name:
+        bank.name = name
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Nome é obrigatório'}), 400
+
+@main.route('/banks/<int:id>/delete', methods=['POST'])
+def delete_bank(id):
+    bank = Bank.query.get_or_404(id)
+    if len(bank.accounts) > 0:
+        return jsonify({
+            'success': False, 
+            'error': 'Não é possível excluir um banco que possui contas vinculadas'
+        }), 400
+    
+    db.session.delete(bank)
+    db.session.commit()
+    return jsonify({'success': True})
+
 @main.route('/accounts', methods=['GET', 'POST'])
 def accounts():
     if request.method == 'POST':

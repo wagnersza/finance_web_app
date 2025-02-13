@@ -31,13 +31,34 @@
                         <tr>
                             <th>Nome</th>
                             <th>Número de Contas</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for bank in banks %}
-                        <tr>
-                            <td>{{ bank.name }}</td>
+                        <tr id="bank-{{ bank.id }}">
+                            <td>
+                                <span class="bank-name">{{ bank.name }}</span>
+                                <input type="text" class="form-control d-none edit-bank-input" value="{{ bank.name }}">
+                            </td>
                             <td>{{ bank.accounts|length }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary edit-bank" data-id="{{ bank.id }}">
+                                        <i class="ri-edit-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success d-none save-bank" data-id="{{ bank.id }}">
+                                        <i class="ri-check-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger d-none cancel-edit" data-id="{{ bank.id }}">
+                                        <i class="ri-close-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-bank" data-id="{{ bank.id }}"
+                                            {% if bank.accounts|length > 0 %}disabled title="Não é possível excluir um banco com contas vinculadas"{% endif %}>
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -46,4 +67,117 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit bank
+    document.querySelectorAll('.edit-bank').forEach(button => {
+        button.addEventListener('click', function() {
+            const bankId = this.dataset.id;
+            const row = document.getElementById(`bank-${bankId}`);
+            
+            // Show/hide elements
+            row.querySelector('.bank-name').classList.add('d-none');
+            row.querySelector('.edit-bank-input').classList.remove('d-none');
+            this.classList.add('d-none');
+            row.querySelector('.save-bank').classList.remove('d-none');
+            row.querySelector('.cancel-edit').classList.remove('d-none');
+            row.querySelector('.delete-bank').classList.add('d-none');
+        });
+    });
+
+    // Save bank edit
+    document.querySelectorAll('.save-bank').forEach(button => {
+        button.addEventListener('click', async function() {
+            const bankId = this.dataset.id;
+            const row = document.getElementById(`bank-${bankId}`);
+            const newName = row.querySelector('.edit-bank-input').value.trim();
+            
+            if (!newName) {
+                alert('O nome do banco é obrigatório');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/banks/${bankId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `name=${encodeURIComponent(newName)}`
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update display
+                    row.querySelector('.bank-name').textContent = newName;
+                    
+                    // Reset view
+                    cancelEdit(row);
+                } else {
+                    alert(data.error || 'Erro ao atualizar o banco');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erro ao atualizar o banco');
+            }
+        });
+    });
+
+    // Cancel edit
+    document.querySelectorAll('.cancel-edit').forEach(button => {
+        button.addEventListener('click', function() {
+            const bankId = this.dataset.id;
+            const row = document.getElementById(`bank-${bankId}`);
+            cancelEdit(row);
+        });
+    });
+
+    function cancelEdit(row) {
+        // Reset input value
+        const nameSpan = row.querySelector('.bank-name');
+        const input = row.querySelector('.edit-bank-input');
+        input.value = nameSpan.textContent;
+        
+        // Reset view
+        nameSpan.classList.remove('d-none');
+        input.classList.add('d-none');
+        row.querySelector('.edit-bank').classList.remove('d-none');
+        row.querySelector('.save-bank').classList.add('d-none');
+        row.querySelector('.cancel-edit').classList.add('d-none');
+        row.querySelector('.delete-bank').classList.remove('d-none');
+    }
+
+    // Delete bank
+    document.querySelectorAll('.delete-bank').forEach(button => {
+        button.addEventListener('click', async function() {
+            if (this.disabled) return;
+            
+            if (!confirm('Tem certeza que deseja excluir este banco?')) {
+                return;
+            }
+
+            const bankId = this.dataset.id;
+            try {
+                const response = await fetch(`/banks/${bankId}/delete`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Remove row from table
+                    document.getElementById(`bank-${bankId}`).remove();
+                } else {
+                    alert(data.error || 'Erro ao excluir o banco');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erro ao excluir o banco');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
