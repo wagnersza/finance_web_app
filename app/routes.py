@@ -21,45 +21,57 @@ def index():
     # Get accounts with related data
     accounts = Account.query.join(Bank).join(Currency).all()
     
-    # Get expenses by category (considering expense type)
-    category_expenses = db.session.query(
+    # Get expenses and revenues by category
+    category_data = db.session.query(
         Category.name,
         func.sum(case(
             (Expense.type == 'expense', Expense.amount),
             else_=0
-        ))
+        )).label('expenses'),
+        func.sum(case(
+            (Expense.type == 'revenue', Expense.amount),
+            else_=0
+        )).label('revenues')
     ).join(Expense).group_by(Category.name).all()
     
     category_labels = []
-    category_amounts = []
-    if category_expenses:
-        category_labels = [item[0] for item in category_expenses]
-        category_amounts = [float(item[1] or 0) for item in category_expenses]
+    category_expenses = []
+    category_revenues = []
     
-    # Get monthly expenses for the last 6 months (considering expense type)
+    if category_data:
+        category_labels = [item[0] for item in category_data]
+        category_expenses = [float(item[1] or 0) for item in category_data]
+        category_revenues = [float(item[2] or 0) for item in category_data]
+    
+    # Get monthly expenses and revenues for the last 6 months
     today = datetime.utcnow()
     six_months_ago = today - timedelta(days=180)
     
-    monthly_expenses = db.session.query(
+    monthly_data = db.session.query(
         func.strftime('%Y-%m', Expense.date).label('month'),
         func.sum(case(
             (Expense.type == 'expense', Expense.amount),
             else_=0
-        )).label('total')
+        )).label('expenses'),
+        func.sum(case(
+            (Expense.type == 'revenue', Expense.amount),
+            else_=0
+        )).label('revenues')
     ).filter(
-        Expense.date >= six_months_ago,
-        Expense.type == 'expense'  # Only include actual expenses
+        Expense.date >= six_months_ago
     ).group_by('month').order_by('month').all()
     
     monthly_labels = []
-    monthly_amounts = []
+    monthly_expenses = []
+    monthly_revenues = []
     
-    if monthly_expenses:
-        for expense in monthly_expenses:
-            year, month = map(int, expense[0].split('-'))
+    if monthly_data:
+        for data in monthly_data:
+            year, month = map(int, data[0].split('-'))
             month_name = calendar.month_abbr[month]
             monthly_labels.append(f"{month_name} {year}")
-            monthly_amounts.append(float(expense[1] or 0))
+            monthly_expenses.append(float(data[1] or 0))
+            monthly_revenues.append(float(data[2] or 0))
     
     # Get default currency (USD)
     default_currency = Currency.query.filter_by(code='USD').first()
@@ -113,9 +125,11 @@ def index():
                          } for c in categories],
                          currencies=currencies,
                          category_labels=category_labels,
-                         category_amounts=category_amounts,
+                         category_expenses=category_expenses,
+                         category_revenues=category_revenues,
                          monthly_labels=monthly_labels,
-                         monthly_amounts=monthly_amounts,
+                         monthly_expenses=monthly_expenses,
+                         monthly_revenues=monthly_revenues,
                          default_currency=default_currency_dict)
 
 @main.route('/banks', methods=['GET', 'POST'])

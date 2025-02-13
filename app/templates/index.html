@@ -11,7 +11,7 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h4>Despesas por Categoria</h4>
+                    <h4>Transações por Categoria</h4>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -183,13 +183,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Chart initialization
     try {
         const categoryLabels = {{ category_labels|tojson|safe }} || [];
-        const categoryAmounts = {{ category_amounts|tojson|safe }} || [];
+        const categoryExpenses = {{ category_expenses|tojson|safe }} || [];
+        const categoryRevenues = {{ category_revenues|tojson|safe }} || [];
         const monthlyLabels = {{ monthly_labels|tojson|safe }} || [];
-        const monthlyAmounts = {{ monthly_amounts|tojson|safe }} || [];
+        const monthlyExpenses = {{ monthly_expenses|tojson|safe }} || [];
+        const monthlyRevenues = {{ monthly_revenues|tojson|safe }} || [];
         const defaultCurrencySymbol = '{{ default_currency.symbol|safe }}';
 
-        initializeCategoryChart(categoryLabels, categoryAmounts, defaultCurrencySymbol);
-        initializeMonthlyChart(monthlyLabels, monthlyAmounts, defaultCurrencySymbol);
+        initializeCategoryChart(categoryLabels, categoryExpenses, categoryRevenues, defaultCurrencySymbol);
+        initializeMonthlyChart(monthlyLabels, monthlyExpenses, monthlyRevenues, defaultCurrencySymbol);
     } catch (error) {
         console.error('Error initializing charts:', error);
     }
@@ -506,47 +508,105 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Chart initialization functions
-function initializeCategoryChart(categoryLabels, categoryAmounts, defaultCurrencySymbol) {
+function initializeCategoryChart(categoryLabels, categoryExpenses, categoryRevenues, defaultCurrencySymbol) {
     const categoryCtx = document.getElementById('expensesByCategory');
     if (categoryCtx && categoryCtx.getContext) {
         try {
             const ctx = categoryCtx.getContext('2d');
             if (ctx) {
                 new Chart(ctx, {
-                    type: 'doughnut',
+                    type: 'bar',
                     data: {
                         labels: categoryLabels,
-                        datasets: [{
-                            data: categoryAmounts,
-                            backgroundColor: [
-                                '#FF6384',
-                                '#36A2EB',
-                                '#FFCE56',
-                                '#4BC0C0',
-                                '#9966FF',
-                                '#FF9F40'
-                            ]
-                        }]
+                        datasets: [
+                            {
+                                label: 'Despesas',
+                                data: categoryExpenses,
+                                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Receitas',
+                                data: categoryRevenues,
+                                backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: 20
+                        },
                         plugins: {
                             legend: {
-                                position: 'right',
+                                position: 'top',
                                 labels: {
                                     font: {
-                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                    }
+                                        family: 'Inter, -apple-system, sans-serif',
+                                        size: 12
+                                    },
+                                    usePointStyle: true,
+                                    padding: 15
                                 }
                             },
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        const label = context.label || '';
-                                        const value = context.parsed || 0;
-                                        return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)}`;
+                                        const label = context.dataset.label || '';
+                                        const value = context.parsed.y;
+                                        let percentage = 0;
+                                        
+                                        // Calculate percentage based on dataset type
+                                        const totalForType = context.dataset.data.reduce((acc, curr) => acc + curr, 0);
+                                        if (totalForType > 0) {
+                                            percentage = ((value / totalForType) * 100).toFixed(1);
+                                        }
+                                        
+                                        return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)} (${percentage}%)`;
                                     }
+                                },
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                cornerRadius: 8,
+                                titleFont: {
+                                    size: 13
+                                },
+                                bodyFont: {
+                                    size: 13
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        family: 'Inter, -apple-system, sans-serif',
+                                        size: 11
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return defaultCurrencySymbol + ' ' + value.toFixed(2);
+                                    },
+                                    font: {
+                                        family: 'Inter, -apple-system, sans-serif',
+                                        size: 11
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
                                 }
                             }
                         }
@@ -559,61 +619,132 @@ function initializeCategoryChart(categoryLabels, categoryAmounts, defaultCurrenc
     }
 }
 
-function initializeMonthlyChart(monthlyLabels, monthlyAmounts, defaultCurrencySymbol) {
+function initializeMonthlyChart(monthlyLabels, monthlyExpenses, monthlyRevenues, defaultCurrencySymbol) {
     const monthlyCtx = document.getElementById('monthlyExpenses');
     if (monthlyCtx && monthlyCtx.getContext) {
         try {
             const ctx = monthlyCtx.getContext('2d');
             if (ctx) {
+                // Calculate min and max for better Y axis scaling
+                const allValues = [...monthlyExpenses, ...monthlyRevenues];
+                const maxAmount = Math.max(...allValues);
+                const minAmount = Math.min(...monthlyExpenses);
+                const buffer = maxAmount * 0.1; // 10% buffer
+
                 new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: monthlyLabels,
-                        datasets: [{
-                            label: 'Total de Despesas',
-                            data: monthlyAmounts,
-                            borderColor: '#36A2EB',
-                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                            fill: true,
-                            tension: 0.1
-                        }]
+                        datasets: [
+                            {
+                                label: 'Despesas',
+                                data: monthlyExpenses,
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                order: 2
+                            },
+                            {
+                                label: 'Receitas',
+                                data: monthlyRevenues,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                order: 1
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
                         plugins: {
                             legend: {
                                 labels: {
                                     font: {
-                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                    }
+                                        family: 'Inter, -apple-system, sans-serif',
+                                        size: 12
+                                    },
+                                    usePointStyle: true,
+                                    boxWidth: 6,
+                                    padding: 15
                                 }
                             },
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return `${defaultCurrencySymbol} ${context.parsed.y.toFixed(2)}`;
+                                        const value = context.parsed.y;
+                                        const datasetIndex = context.datasetIndex;
+                                        const label = context.dataset.label;
+                                        const prevValue = context.dataset.data[context.dataIndex - 1];
+                                        let change = '';
+                                        
+                                        if (prevValue !== undefined) {
+                                            const percentChange = ((value - prevValue) / prevValue * 100).toFixed(1);
+                                            change = percentChange > 0 
+                                                ? ` (+${percentChange}%)`
+                                                : ` (${percentChange}%)`;
+                                        }
+                                        
+                                        return `${label}: ${defaultCurrencySymbol} ${value.toFixed(2)}${change}`;
                                     }
+                                },
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                cornerRadius: 8,
+                                titleFont: {
+                                    size: 13
+                                },
+                                bodyFont: {
+                                    size: 13
                                 }
                             }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
+                                min: 0,
+                                max: maxAmount + buffer,
                                 ticks: {
                                     callback: function(value) {
                                         return defaultCurrencySymbol + ' ' + value.toFixed(2);
                                     },
                                     font: {
-                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                    }
+                                        family: 'Inter, -apple-system, sans-serif',
+                                        size: 11
+                                    },
+                                    maxTicksLimit: 8
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
                                 }
                             },
                             x: {
                                 ticks: {
                                     font: {
-                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                                    }
+                                        family: 'Inter, -apple-system, sans-serif',
+                                        size: 11
+                                    },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                },
+                                grid: {
+                                    display: false
                                 }
                             }
                         }
