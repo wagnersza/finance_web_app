@@ -15,6 +15,8 @@
     --navbar-text: #ffffff;
     --navbar-active: #00d084;
     --navbar-hover: rgba(255, 255, 255, 0.1);
+    --text-positive: #28a745;
+    --text-negative: #dc3545;
 }
 
 :root[data-theme="light"] {
@@ -33,6 +35,8 @@
     --navbar-text: #333333;
     --navbar-active: #00b673;
     --navbar-hover: rgba(0, 0, 0, 0.05);
+    --text-positive: #28a745;
+    --text-negative: #dc3545;
 }
 
 /* Modern Dark Theme */
@@ -357,12 +361,17 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .text-danger {
-    color: #dc3545 !important;
+    color: var(--text-negative) !important;
     font-weight: 500;
 }
 
 .text-dark {
-    color: #212529 !important;
+    color: var(--text-primary) !important;
+    font-weight: 500;
+}
+
+.text-success {
+    color: var(--text-positive) !important;
     font-weight: 500;
 }
 
@@ -402,11 +411,6 @@ canvas {
 .bg-success {
     background-color: #28a745;
     color: white;
-}
-
-.text-success {
-    color: #28a745 !important;
-    font-weight: 500;
 }
 
 /* Button group styles */

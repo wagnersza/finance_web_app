@@ -56,7 +56,7 @@
                                 <tr>
                                     <td>{{ account.name }}</td>
                                     <td>{{ account.bank.name }}</td>
-                                    <td class="text-right {{ 'text-danger' if account.balance < 0 else 'text-dark' }}">
+                                    <td class="text-right {{ 'text-danger' if account.balance < 0 else 'text-success' }}">
                                         {{ account.currency.symbol }} {{ "%.2f"|format(account.balance) }}
                                     </td>
                                     <td>{{ account.currency.code }}</td>
