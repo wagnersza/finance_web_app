@@ -23,9 +23,40 @@ def calculate_account_balances(accounts):
 def format_currency(value):
     """Format currency value to Brazilian format"""
     try:
-        return locale.format_string('%.2f', float(value), grouping=True)
+        # Handle large numbers by first converting to float
+        num = float(str(value).replace('.', '').replace(',', '.'))
+        # Format with grouping for thousands
+        formatted = f"{num:,.2f}"
+        # Convert to Brazilian format
+        return formatted.replace(',', 'X').replace('.', ',').replace('X', '.')
     except:
-        return f"{float(value):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        return "0,00"
+
+def convert_brazilian_amount_to_float(amount_str):
+    """Convert Brazilian formatted number (1.234,56 or 3.333,99) to float"""
+    try:
+        if not amount_str:
+            raise ValueError("Amount cannot be empty")
+            
+        # Handle case where input is already a decimal number
+        if isinstance(amount_str, (int, float)):
+            return float(amount_str)
+            
+        # Strip any whitespace
+        amount_str = str(amount_str).strip()
+        
+        # If it's a decimal number without thousand separators, convert directly
+        if amount_str.count('.') == 1 and amount_str.count(',') == 0:
+            return float(amount_str)
+        
+        # For Brazilian format (1.234,56 or 1234,56)
+        # Remove thousand separators and replace decimal separator
+        cleaned = amount_str.replace('.', '').replace(',', '.')
+        result = float(cleaned)
+        return result
+        
+    except (ValueError, AttributeError) as e:
+        raise ValueError(f"Invalid amount format: {amount_str}")
 
 @main.route('/')
 def index():
@@ -279,8 +310,7 @@ def add_expense():
             
             # Clean and parse amount value - handle Brazilian number format
             raw_amount = request.form.get('amount', '0')
-            # Convert from Brazilian format (1.234,56) to standard format (1234.56)
-            amount = float(raw_amount.replace('.', '').replace(',', '.').strip())
+            amount = convert_brazilian_amount_to_float(raw_amount)
             
             description = request.form.get('description')
             category_id = request.form.get('category_id')

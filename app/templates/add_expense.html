@@ -86,6 +86,25 @@ window.addEventListener('load', function() {
         return;
     }
 
+    // Format to Brazilian currency format (1.234,56)
+    function formatBrazilianNumber(value) {
+        if (!value) return '0,00';
+        // Convert string input to number if needed
+        const num = typeof value === 'string' ? parseFloat(value.replace('.', '').replace(',', '.')) : value;
+        // Split into whole and decimal parts
+        let [whole, decimal] = num.toFixed(2).split('.');
+        // Add thousand separators to the whole part
+        whole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return whole + ',' + decimal;
+    }
+
+    // Convert from Brazilian to standard decimal format
+    function toStandardDecimal(value) {
+        if (!value) return '0.00';
+        // Remove all dots and replace comma with dot
+        return value.replace(/\./g, '').replace(',', '.');
+    }
+
     // Initialize modal instances
     const modalInstances = {};
     const modals = document.querySelectorAll('.modal');
@@ -271,30 +290,30 @@ window.addEventListener('load', function() {
 
     amountInput.addEventListener('input', function(e) {
         let value = e.target.value;
-        // Remove any character that isn't a number, comma or dot
+        
+        // Only allow numbers, one comma or one dot
         value = value.replace(/[^\d.,]/g, '');
         
-        // Replace dots with commas for consistency
-        value = value.replace('.', ',');
-        
-        // Only allow one comma
-        const parts = value.split(',');
-        if (parts.length > 2) {
-            value = parts[0] + ',' + parts.slice(1).join('');
+        // If there's both comma and dot, keep only the last one as decimal separator
+        if (value.includes('.') && value.includes(',')) {
+            const lastDotIndex = value.lastIndexOf('.');
+            const lastCommaIndex = value.lastIndexOf(',');
+            const lastSeparator = Math.max(lastDotIndex, lastCommaIndex);
+            
+            // Remove all dots and commas except the last one
+            value = value.replace(/[.,]/g, '');
+            value = value.slice(0, lastSeparator) + 
+                   (lastCommaIndex > lastDotIndex ? ',' : '.') + 
+                   value.slice(lastSeparator);
         }
         
-        // Format thousands with dots
-        if (parts[0].length > 3) {
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        }
-        
-        // Limit decimal places to 2
-        if (parts[1] && parts[1].length > 2) {
+        // Ensure only two decimal places
+        const parts = value.split(/[,.]/);
+        if (parts.length > 1 && parts[1].length > 2) {
             parts[1] = parts[1].substring(0, 2);
+            value = parts.join(value.includes(',') ? ',' : '.');
         }
-        
-        // Reconstruct the value
-        value = parts.join(',');
+
         e.target.value = value;
     });
 
@@ -302,9 +321,20 @@ window.addEventListener('load', function() {
     document.querySelector('form').addEventListener('submit', function(e) {
         const value = amountInput.value;
         if (value) {
-            // Convert from Brazilian format (1.234,56) to standard format (1234.56)
-            const standardFormat = value.replace(/\./g, '').replace(',', '.');
-            amountInput.value = standardFormat;
+            // First convert to standard format with dot as decimal separator
+            let formattedValue = value;
+            if (value.includes(',')) {
+                formattedValue = value.replace(',', '.');
+            }
+            
+            // Validate the number format
+            if (!/^\d*\.?\d{0,2}$/.test(formattedValue)) {
+                e.preventDefault();
+                alert('Por favor, insira um valor válido com até duas casas decimais.');
+                return;
+            }
+            
+            amountInput.value = formattedValue;
         }
     });
 

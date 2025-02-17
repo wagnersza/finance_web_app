@@ -47,7 +47,7 @@
                                 <tr>
                                     <th>Conta</th>
                                     <th>Banco</th>
-                                    <th class="text-end">Saldo</th>
+                                    <th class="text-right">Saldo</th>
                                     <th>Moeda</th>
                                 </tr>
                             </thead>
@@ -56,8 +56,8 @@
                                 <tr>
                                     <td>{{ account.name }}</td>
                                     <td>{{ account.bank.name }}</td>
-                                    <td class="text-end {{ 'text-danger' if account.balance < 0 else 'text-success' }}" data-type="currency">
-                                        {{ account.currency.symbol }} {{ "{:,.2f}".format(account.balance).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                    <td class="text-right {{ 'text-danger' if account.balance < 0 else 'text-success' }}">
+                                        {{ account.currency.symbol }} {{ "%.2f"|format(account.balance) }}
                                     </td>
                                     <td>{{ account.currency.code }}</td>
                                 </tr>
@@ -165,6 +165,21 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Format to Brazilian currency format (1.234,56)
+    function formatBrazilianNumber(value) {
+        if (!value) return '0,00';
+        const num = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : value;
+        let [whole, decimal] = num.toFixed(2).split('.');
+        whole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return whole + ',' + decimal;
+    }
+
+    // Convert from Brazilian to standard decimal format
+    function toStandardDecimal(value) {
+        if (!value) return '0.00';
+        return value.replace(/\./g, '').replace(',', '.');
+    }
+
     // Initialize modal instances
     const modalInstances = {};
     const modals = document.querySelectorAll('.modal');
@@ -480,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (quickAmountInput) {
             quickAmountInput.addEventListener('input', function(e) {
                 let value = e.target.value;
-                value = value.replace(/[^\d.,]/g, '');
+                value = value.replace(/[^\d,.]/g, '');
                 value = value.replace('.', ',');
                 
                 const parts = value.split(',');
@@ -488,18 +503,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     value = parts[0] + ',' + parts.slice(1).join('');
                 }
                 
-                // Format thousands with dots
-                if (parts[0].length > 3) {
-                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                if (value.includes(',')) {
+                    const decimals = value.split(',')[1];
+                    if (decimals.length > 2) {
+                        value = value.split(',')[0] + ',' + decimals.slice(0, 2);
+                    }
+                }
+
+                const beforeComma = value.split(',')[0];
+                if (beforeComma.length > 3) {
+                    const formatted = beforeComma.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    value = formatted + (value.includes(',') ? ',' + value.split(',')[1] : '');
                 }
                 
-                // Limit decimal places to 2
-                if (parts[1] && parts[1].length > 2) {
-                    parts[1] = parts[1].substring(0, 2);
-                }
-                
-                value = parts.join(',');
                 e.target.value = value;
+            });
+
+            // Format on blur to ensure consistent display
+            quickAmountInput.addEventListener('blur', function(e) {
+                const value = e.target.value;
+                if (value) {
+                    const standardValue = toStandardDecimal(value);
+                    e.target.value = formatBrazilianNumber(standardValue);
+                }
             });
         }
 
@@ -507,8 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
             quickExpenseForm.addEventListener('submit', function(e) {
                 const value = quickAmountInput?.value;
                 if (value) {
-                    // Convert from Brazilian format (1.234,56) to standard format (1234.56)
-                    quickAmountInput.value = value.replace(/\./g, '').replace(',', '.');
+                    quickAmountInput.value = toStandardDecimal(value);
                 }
             });
         }
@@ -765,12 +790,9 @@ function initializeMonthlyChart(monthlyLabels, monthlyExpenses, monthlyRevenues,
     }
 }
 
+// Use Brazilian format for all currency displays
 function formatCurrency(value) {
-    return value.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-        useGrouping: true
-    });
+    return formatBrazilianNumber(value);
 }
 </script>
 {% endblock %}
